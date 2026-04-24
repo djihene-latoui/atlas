@@ -192,13 +192,19 @@ export default function FicheProduitPage({ params }: { params: Promise<{ id: str
   // HANDLER : Ajouter au panier ---------------------------
 
   async function handleAddToCart() {
-    setCartError("");
-    setCartSuccess(false);
+  setCartError("");
+  setCartSuccess(false);
 
-    if (!varianteSelectionnee) {
-      setCartError("Veuillez sélectionner une variante.");
-      return;
-    }
+  // Si non connecté → ouvre la modale de connexion
+  if (!userId) {
+    openLogin();
+    return;
+  }
+
+  if (!varianteSelectionnee) {
+    setCartError("Veuillez sélectionner une variante.");
+    return;
+  }
     try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cart/items`, {
         method: "POST",

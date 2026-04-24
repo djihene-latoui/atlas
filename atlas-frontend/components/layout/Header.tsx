@@ -89,10 +89,11 @@ export function Header({ cartCount = 0 }: HeaderProps) {
   const role = VALID_ROLES.includes(rawRole) ? rawRole : null;
 
   const isVendeurPage =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/products") ||
-    pathname.startsWith("/boutique") ||
-    pathname.startsWith("/ventes");
+  pathname.startsWith("/dashboard") ||
+  pathname.startsWith("/products") ||
+  pathname.startsWith("/boutique") ||
+  pathname.startsWith("/ventes") ||
+  pathname.startsWith("/shop");
 
   // On vendor pages the header is hidden; on any other page treat VENDEUR as VISITOR
   // (guards against stale BetterAuth localStorage cache returning a VENDEUR session

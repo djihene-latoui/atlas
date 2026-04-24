@@ -82,7 +82,7 @@ export function SellerSidebar({ sellerName = 'Ma Boutique' }: SellerSidebarProps
     <>
       {/* DESKTOP SIDEBAR */}
       <aside
-        className={`hidden md:flex ${collapsed ? 'w-20' : 'w-64'} h-screen sticky top-0 flex-col transition-all duration-300 z-40`}
+        className={`hidden md:flex ${collapsed ? 'w-20' : 'w-64'} h-screen sticky top-0 flex-col transition-all duration-300 z-40 overflow-hidden`}
         style={{ backgroundColor: '#19244B' }}
       >
         {/* Logo & Toggle Header */}

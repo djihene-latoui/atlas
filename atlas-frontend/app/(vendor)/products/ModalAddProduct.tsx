@@ -266,27 +266,41 @@ export function ModalAddProduct({ isOpen, onClose, onSuccess, produitInitial }: 
 
     const variantesActives = form.variantes.filter((v) => !v.supprimee);
 
-          // ── Validation des variantes ─────────────────────────────────────────
-      // Au moins une variante avec un stock renseigné est obligatoire.
-      // On n'injecte plus de variante par défaut silencieusement — le vendeur
-      // doit explicitement configurer ses variantes pour éviter les produits
-      // sans stock dans le catalogue.
-      const hasRealVariante = variantesActives.some(
-        (v) => v.stock !== "" && parseInt(v.stock) >= 0
-      );
+       // ── Validation des variantes ─────────────────────────────────────────
+        // Une variante valide doit avoir :
+        // - Au moins un attribut avec clé ET valeur renseignés
+        // - Un stock renseigné (>= 0)
+        // Sans ça, le produit ne peut pas être créé.
+        const hasRealVariante = variantesActives.some(
+          (v) =>
+            v.stock !== "" &&
+            parseInt(v.stock) >= 0 &&
+            v.attributs.some((a) => a.cle.trim() !== "" && a.valeur.trim() !== "")
+        );
 
-      if (!hasRealVariante) {
-        return setFormError("Veuillez créer au moins une variante avec un stock renseigné.");
-      }
-
-      // Vérifie que chaque variante active a bien un stock renseigné
-      for (let i = 0; i < variantesActives.length; i++) {
-        if (variantesActives[i].stock === "") {
-          return setFormError(`Veuillez renseigner le stock de la variante ${i + 1}.`);
+        if (!hasRealVariante) {
+          return setFormError(
+            "Veuillez configurer au moins une variante avec un attribut (clé + valeur) et un stock renseigné."
+          );
         }
-      }
 
-      const variantesToSubmit = variantesActives;
+        // Vérifie que chaque variante active est complète
+        for (let i = 0; i < variantesActives.length; i++) {
+          const v = variantesActives[i];
+          const aAttributValide = v.attributs.some(
+            (a) => a.cle.trim() !== "" && a.valeur.trim() !== ""
+          );
+          if (!aAttributValide) {
+            return setFormError(
+              `La variante ${i + 1} doit avoir au moins un attribut (clé + valeur) renseigné.`
+            );
+          }
+          if (v.stock === "") {
+            return setFormError(`Veuillez renseigner le stock de la variante ${i + 1}.`);
+          }
+        }
+
+        const variantesToSubmit = variantesActives;
 
     const variantesFormatees = [];
     for (let i = 0; i < variantesToSubmit.length; i++) {

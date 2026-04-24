@@ -1,17 +1,28 @@
 /**
  * @file page.tsx
- * @description Page "Mes Produits" du dashboard vendeur. 
- * Filtrage par statut (Actif/Inactif) avec les labels originaux.
+ * @description Page "Mes Produits" du dashboard vendeur.
+ * Filtrage par statut (Actif/Inactif/Tous) et par categorie dynamique.
+ * Les categories sont chargees depuis l'API au lieu d'etre codees en dur.
+ * La suppression retire le produit immediatement de la liste locale.
  */
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, Search, Pencil, Trash2, Package as PackageIcon, ChevronDown, AlertTriangle } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  Package as PackageIcon,
+  ChevronDown,
+  AlertTriangle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModalAddProduct } from "./ModalAddProduct";
 import { SellerSidebar } from "@/app/(vendor)/dashboard/SellerSidebar";
-import Link from "next/link";
 
-// TYPES
+// TYPES -----------------------------------------------------------------------
+
+/** Variante d'un produit avec ses attributs, stock et prix supplementaire. */
 export type Variante = {
   id?: number;
   produit_id?: number;
@@ -22,6 +33,7 @@ export type Variante = {
   seuil_stock_faible: number;
 };
 
+/** Produit tel que retourne par l'API vendeur. */
 export type Produit = {
   id: number;
   boutique_id: number;
@@ -37,8 +49,17 @@ export type Produit = {
   categorie_nom: string;
 };
 
-// ─── Modale de confirmation de suppression ────────────────────────────────────
+// MODALE DE CONFIRMATION DE SUPPRESSION ---------------------------------------
 
+/**
+ * Modale de confirmation avant suppression definitive d'un produit.
+ * Affiche le nom et l'image du produit concerne.
+ *
+ * @param produit - Le produit a supprimer.
+ * @param onClose - Ferme la modale sans supprimer.
+ * @param onConfirm - Confirme et declenche la suppression.
+ * @param isLoading - Affiche un spinner pendant la suppression.
+ */
 function DeleteConfirmModal({
   produit,
   onClose,
@@ -56,6 +77,7 @@ function DeleteConfirmModal({
         className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden"
         style={{ animation: "modalIn 0.2s ease-out" }}
       >
+        {/* Barre decorative rouge en haut de la modale */}
         <div className="h-1.5 w-full bg-gradient-to-r from-red-400 to-rose-500" />
 
         <div className="p-6">
@@ -68,12 +90,15 @@ function DeleteConfirmModal({
                 Supprimer ce produit ?
               </h2>
               <p className="text-sm text-gray-500 mt-1 leading-relaxed">
-                <span className="font-medium text-gray-700">« {produit.nom} »</span> sera
-                définitivement supprimé. Cette action est irréversible.
+                <span className="font-medium text-gray-700">
+                  {produit.nom}
+                </span>{" "}
+                sera definitivement supprime. Cette action est irreversible.
               </p>
             </div>
           </div>
 
+          {/* Apercu du produit a supprimer */}
           <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 mb-5 border border-gray-100">
             <div className="w-9 h-9 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
               {produit.images?.[0] ? (
@@ -89,11 +114,16 @@ function DeleteConfirmModal({
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-800 truncate">{produit.nom}</p>
-              <p className="text-xs text-gray-400">#{produit.id} · {Number(produit.prix).toFixed(2)} €</p>
+              <p className="text-sm font-medium text-gray-800 truncate">
+                {produit.nom}
+              </p>
+              <p className="text-xs text-gray-400">
+                #{produit.id} · {Number(produit.prix).toFixed(2)} €
+              </p>
             </div>
           </div>
 
+          {/* Boutons Annuler / Confirmer */}
           <div className="flex gap-2">
             <button
               onClick={onClose}
@@ -133,21 +163,44 @@ function DeleteConfirmModal({
   );
 }
 
-// ─── Page principale ──────────────────────────────────────────────────────────
+// PAGE PRINCIPALE -------------------------------------------------------------
 
+/**
+ * Page "Mes Produits" du dashboard vendeur.
+ *
+ * Fonctionnalites :
+ * - Chargement des produits depuis GET /api/vendor/products
+ * - Chargement des categories depuis GET /api/categories (dynamique)
+ * - Filtrage par nom, categorie et statut (actif/inactif/tous)
+ * - Ajout et modification via ModalAddProduct
+ * - Suppression avec confirmation et mise a jour immediate de la liste
+ *
+ * @returns La page liste des produits vendeur.
+ */
 export default function MesProduitsPage() {
   const [produits, setProduits] = useState<Produit[]>([]);
   const [recherche, setRecherche] = useState("");
-  const [filtreCategorie, setFiltreCategorie] = useState("Toutes les catégories");
+  const [filtreCategorie, setFiltreCategorie] = useState("Toutes les categories");
   const [statutFiltre, setStatutFiltre] = useState<"tous" | "actif" | "inactif">("tous");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [produitAModifier, setProduitAModifier] = useState<Produit | null>(null);
-
   const [produitASupprimer, setProduitASupprimer] = useState<Produit | null>(null);
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
 
+  /**
+   * Liste des noms de categories chargee dynamiquement depuis l'API.
+   * Remplace les options codees en dur (Electronique, Mode, Maison).
+   */
+  const [categories, setCategories] = useState<string[]>([]);
+
+  /**
+   * Charge la liste des produits du vendeur connecte.
+   * Appelee au montage et apres chaque creation ou modification.
+   */
   const chargerProduits = () => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/vendor/products`, { credentials: "include" })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/vendor/products`, {
+      credentials: "include",
+    })
       .then((res) => res.json())
       .then((data) => setProduits(Array.isArray(data) ? data : []))
       .catch((err) => console.error("Erreur chargement produits:", err));
@@ -155,20 +208,45 @@ export default function MesProduitsPage() {
 
   useEffect(() => {
     chargerProduits();
+
+    // Chargement des categories depuis l'API pour alimenter le filtre dynamiquement.
+    // Remplace les options codees en dur qui ne reflétaient pas la vraie BDD.
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`, {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setCategories(data.map((c: { nom: string }) => c.nom));
+        }
+      })
+      .catch((err) => console.error("Erreur chargement categories:", err));
   }, []);
 
+  /**
+   * Ouvre la modale de confirmation de suppression pour le produit cible.
+   * La suppression effective est declenchee par confirmerSuppression.
+   */
   const handleSupprimer = (produit: Produit) => {
     setProduitASupprimer(produit);
   };
 
+  /**
+   * Supprime le produit cote API puis le retire immediatement de la liste locale.
+   * Ne recharge pas toute la liste pour eviter un flash inutile.
+   */
   const confirmerSuppression = async () => {
     if (!produitASupprimer) return;
     setSuppressionEnCours(true);
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/vendor/products/${produitASupprimer.id}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/vendor/products/${produitASupprimer.id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+      // Retire le produit de la liste locale sans recharger toute la page
       setProduits((prev) => prev.filter((p) => p.id !== produitASupprimer.id));
     } finally {
       setSuppressionEnCours(false);
@@ -176,35 +254,49 @@ export default function MesProduitsPage() {
     }
   };
 
+  /** Ouvre la modale en mode edition avec le produit selectionne. */
   const handleModifier = (produit: Produit) => {
     setProduitAModifier(produit);
     setIsModalOpen(true);
   };
 
+  /** Ouvre la modale en mode creation (sans produit initial). */
   const handleAjouterClick = () => {
     setProduitAModifier(null);
     setIsModalOpen(true);
   };
 
+  /**
+   * Filtre les produits selon les trois criteres actifs :
+   * - Texte de recherche (nom du produit)
+   * - Categorie selectionnee dans le dropdown
+   * - Statut actif/inactif/tous
+   */
   const produitsFiltres = produits.filter((p) => {
     const matchRecherche = p.nom.toLowerCase().includes(recherche.toLowerCase());
     const matchCategorie =
-      filtreCategorie === "Toutes les catégories" || p.categorie_nom === filtreCategorie;
-    const matchStatut = 
-      statutFiltre === "tous" ? true :
-      statutFiltre === "actif" ? p.actif === true :
-      p.actif === false;
+      filtreCategorie === "Toutes les categories" ||
+      p.categorie_nom === filtreCategorie;
+    const matchStatut =
+      statutFiltre === "tous"
+        ? true
+        : statutFiltre === "actif"
+        ? p.actif === true
+        : p.actif === false;
 
     return matchRecherche && matchCategorie && matchStatut;
   });
 
-  const boutiqueNom = produits.length > 0 ? produits[0].boutique_nom : "Ma Boutique";
+  // Nom de la boutique affiche dans la sidebar — pris du premier produit charge
+  const boutiqueNom =
+    produits.length > 0 ? produits[0].boutique_nom : "Ma Boutique";
 
   return (
     <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
       <SellerSidebar sellerName={boutiqueNom} />
 
       <main className="flex-1 p-4 sm:p-6 lg:p-8 pt-16 md:pt-6 min-w-0">
+        {/* Fil d'ariane */}
         <div className="mb-4">
           <p className="text-sm text-gray-400">
             Accueil / Dashboard /{" "}
@@ -212,9 +304,12 @@ export default function MesProduitsPage() {
           </p>
         </div>
 
+        {/* En-tete de page avec bouton d'ajout */}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#1e293b]">Mes Produits</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#1e293b]">
+              Mes Produits
+            </h1>
             <p className="text-gray-500 mt-1 text-sm">
               {produits.length} produits au total dans votre catalogue
             </p>
@@ -228,9 +323,10 @@ export default function MesProduitsPage() {
           </Button>
         </div>
 
-        {/* Barre de Filtres */}
+        {/* Barre de filtres : recherche + categorie + statut */}
         <div className="bg-white p-2 rounded-2xl border border-gray-100 shadow-sm mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col sm:flex-row gap-2 flex-1">
+            {/* Champ de recherche par nom */}
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -241,30 +337,36 @@ export default function MesProduitsPage() {
                 onChange={(e) => setRecherche(e.target.value)}
               />
             </div>
+
+            {/* Dropdown categories — alimente dynamiquement depuis l'API */}
             <div className="relative">
               <select
                 className="w-full sm:w-48 appearance-none bg-gray-50 border-none px-4 py-2.5 rounded-xl outline-none cursor-pointer pr-10 text-sm font-medium text-gray-700"
                 value={filtreCategorie}
                 onChange={(e) => setFiltreCategorie(e.target.value)}
               >
-                <option>Toutes les catégories</option>
-                <option>Électronique</option>
-                <option>Mode</option>
-                <option>Maison</option>
+                {/* Option par defaut pour afficher tous les produits */}
+                <option>Toutes les categories</option>
+                {/* Options chargees depuis la base de donnees */}
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
           </div>
 
-          {/* Toggle de Statut Segmenté */}
+          {/* Toggle de statut segmente : Tous / Actif / Inactif */}
           <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100 self-start sm:self-center">
             {(["tous", "actif", "inactif"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setStatutFiltre(s)}
                 className={`px-4 py-1.5 text-[11px] font-bold rounded-lg capitalize transition-all ${
-                  statutFiltre === s 
-                    ? "bg-white text-[#5c59f2] shadow-sm ring-1 ring-black/5" 
+                  statutFiltre === s
+                    ? "bg-white text-[#5c59f2] shadow-sm ring-1 ring-black/5"
                     : "text-gray-400 hover:text-gray-600"
                 }`}
               >
@@ -274,16 +376,26 @@ export default function MesProduitsPage() {
           </div>
         </div>
 
-        {/* Table Desktop */}
+        {/* Tableau desktop */}
         <div className="hidden md:block bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-gray-50 bg-gray-50/30">
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Produit</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell">Catégorie</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Prix</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Statut</th>
-                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                  Produit
+                </th>
+                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest hidden lg:table-cell">
+                  Categorie
+                </th>
+                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                  Prix
+                </th>
+                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                  Statut
+                </th>
+                <th className="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -294,54 +406,88 @@ export default function MesProduitsPage() {
                       <div className="p-4 bg-gray-50 rounded-full">
                         <PackageIcon className="w-8 h-8 text-gray-300" />
                       </div>
-                      <p className="text-gray-400 font-medium text-sm">Aucun produit trouvé</p>
+                      <p className="text-gray-400 font-medium text-sm">
+                        Aucun produit trouve
+                      </p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 produitsFiltres.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <tr
+                    key={p.id}
+                    className="hover:bg-gray-50/50 transition-colors group"
+                  >
+                    {/* Colonne produit : image + nom + id */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100 shadow-sm">
                           {p.images?.length > 0 ? (
-                            <img src={p.images[0]} alt="" className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300" />
+                            <img
+                              src={p.images[0]}
+                              alt=""
+                              className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-300"
+                            />
                           ) : (
                             <PackageIcon className="w-5 h-5 text-gray-300" />
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-bold text-gray-900 text-sm leading-tight truncate">{p.nom}</div>
-                          <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tight">#{p.id}</div>
+                          <div className="font-bold text-gray-900 text-sm leading-tight truncate">
+                            {p.nom}
+                          </div>
+                          <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tight">
+                            #{p.id}
+                          </div>
                         </div>
                       </div>
                     </td>
+
+                    {/* Colonne categorie */}
                     <td className="px-6 py-4 hidden lg:table-cell">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 uppercase tracking-wide">
                         {p.categorie_nom}
                       </span>
                     </td>
+
+                    {/* Colonne prix */}
                     <td className="px-6 py-4 font-bold text-gray-900 text-sm">
                       {Number(p.prix).toFixed(2)} €
                     </td>
+
+                    {/* Colonne statut actif/inactif */}
                     <td className="px-6 py-4">
-                      <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${
-                        p.actif 
-                          ? "bg-green-50 border-green-100 text-green-700" 
-                          : "bg-gray-50 border-gray-200 text-gray-500"
-                      }`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${p.actif ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
+                      <div
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${
+                          p.actif
+                            ? "bg-green-50 border-green-100 text-green-700"
+                            : "bg-gray-50 border-gray-200 text-gray-500"
+                        }`}
+                      >
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            p.actif ? "bg-green-500 animate-pulse" : "bg-gray-400"
+                          }`}
+                        />
                         <span className="text-[10px] font-black uppercase tracking-wider">
                           {p.actif ? "Actif" : "Inactif"}
                         </span>
                       </div>
                     </td>
+
+                    {/* Colonne actions : modifier + supprimer */}
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-1">
-                        <button onClick={() => handleModifier(p)} className="p-2 text-gray-400 hover:text-[#5c59f2] hover:bg-indigo-50 rounded-xl transition-all">
+                        <button
+                          onClick={() => handleModifier(p)}
+                          className="p-2 text-gray-400 hover:text-[#5c59f2] hover:bg-indigo-50 rounded-xl transition-all"
+                        >
                           <Pencil className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleSupprimer(p)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
+                        <button
+                          onClick={() => handleSupprimer(p)}
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -353,31 +499,59 @@ export default function MesProduitsPage() {
           </table>
         </div>
 
-        {/* Vue Mobile */}
+        {/* Vue mobile : cartes empilees */}
         <div className="md:hidden space-y-3">
           {produitsFiltres.map((p) => (
-            <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4">
+            <div
+              key={p.id}
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4"
+            >
               <div className="w-14 h-14 rounded-xl bg-gray-50 flex-shrink-0 overflow-hidden border border-gray-100">
-                <img src={p.images?.[0] || "/placeholder.png"} alt="" className="object-cover w-full h-full" />
+                <img
+                  src={p.images?.[0] || "/placeholder.png"}
+                  alt=""
+                  className="object-cover w-full h-full"
+                />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-bold text-gray-900 text-sm truncate">{p.nom}</div>
+                <div className="font-bold text-gray-900 text-sm truncate">
+                  {p.nom}
+                </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="font-bold text-[#5c59f2] text-xs">{Number(p.prix).toFixed(2)} €</span>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${p.actif ? "bg-green-50 border-green-100 text-green-600" : "bg-gray-50 text-gray-400"}`}>
+                  <span className="font-bold text-[#5c59f2] text-xs">
+                    {Number(p.prix).toFixed(2)} €
+                  </span>
+                  <span
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                      p.actif
+                        ? "bg-green-50 border-green-100 text-green-600"
+                        : "bg-gray-50 text-gray-400"
+                    }`}
+                  >
                     {p.actif ? "ACTIF" : "INACTIF"}
                   </span>
                 </div>
               </div>
               <div className="flex gap-1">
-                <button onClick={() => handleModifier(p)} className="p-2 text-blue-500 bg-blue-50 rounded-xl"><Pencil className="w-4 h-4" /></button>
-                <button onClick={() => handleSupprimer(p)} className="p-2 text-red-500 bg-red-50 rounded-xl"><Trash2 className="w-4 h-4" /></button>
+                <button
+                  onClick={() => handleModifier(p)}
+                  className="p-2 text-blue-500 bg-blue-50 rounded-xl"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleSupprimer(p)}
+                  className="p-2 text-red-500 bg-red-50 rounded-xl"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))}
         </div>
       </main>
 
+      {/* Modale de confirmation de suppression */}
       {produitASupprimer && (
         <DeleteConfirmModal
           produit={produitASupprimer}
@@ -387,6 +561,7 @@ export default function MesProduitsPage() {
         />
       )}
 
+      {/* Modale d'ajout et de modification de produit */}
       <ModalAddProduct
         isOpen={isModalOpen}
         onClose={() => {

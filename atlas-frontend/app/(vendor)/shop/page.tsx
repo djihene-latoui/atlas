@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { SellerSidebar } from "@/app/(vendor)/dashboard/SellerSidebar";
 
+/** Données de la boutique du vendeur récupérées depuis l'API `/api/vendor/shop`. */
 interface ShopData {
   id: number;
   ownerId: string;
@@ -29,6 +30,18 @@ interface ShopData {
   createdAt: string;
 }
 
+/**
+ * Page de gestion de la boutique du vendeur.
+ *
+ * Permet de modifier les informations de la boutique en deux sections :
+ * - **Visuels** : logo et image de couverture (upload direct vers Supabase Storage).
+ * - **Informations** : nom de la boutique, description, IBAN.
+ *
+ * Affiche également des statistiques en lecture seule : note moyenne, avis,
+ * nombre de produits et ventes.
+ *
+ * @returns La page paramètres de la boutique vendeur.
+ */
 export default function SellerStorePage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -239,8 +252,13 @@ export default function SellerStorePage() {
     return (
       <div className="flex flex-col md:flex-row min-h-screen" style={{ backgroundColor: "#F8F9FB" }}>
         <SellerSidebar sellerName="Ma Boutique" />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 pt-20 md:pt-8 space-y-6">
+          <div className="h-8 w-48 bg-gray-200 rounded-lg animate-pulse" />
+          <div className="h-4 w-72 bg-gray-100 rounded animate-pulse" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+            <div className="h-96 bg-white rounded-xl border border-gray-200 animate-pulse" />
+            <div className="h-96 bg-white rounded-xl border border-gray-200 animate-pulse" />
+          </div>
         </main>
       </div>
     );

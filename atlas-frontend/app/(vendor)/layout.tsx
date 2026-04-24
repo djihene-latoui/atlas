@@ -3,12 +3,13 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { AlertTriangle, Home } from "lucide-react";
 import Link from "next/link";
+
 /**
  * Layout de protection pour les pages réservées aux vendeurs.
  *
  * Vérifie que l'utilisateur est authentifié avec le rôle `VENDEUR`.
  * Comportement selon l'état de session :
- * - **Chargement en cours** : spinner centré.
+ * - **Chargement en cours** : rendu direct de children sans bloquer (pas de flash).
  * - **Non authentifié ou rôle incorrect** : page "Accès Refusé" avec bouton vers l'accueil.
  * - **Connecté en tant que VENDEUR** : rendu normal de `children` (dashboard, produits, boutique...).
  *
@@ -16,12 +17,10 @@ import Link from "next/link";
  */
 export default function VendorLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isLoading } = useAuth();
-  
-  // Pendant la vérification de la session, on affiche un loader minimaliste
-  if (isLoading) return null;
 
-  if (!isAuthenticated || user?.role !== "VENDEUR") {
-
+  // On ne bloque JAMAIS sur isLoading pour éviter le flash skeleton → page.
+  // La protection s'applique uniquement quand on est certain que ce n'est pas un vendeur.
+  if (!isLoading && (!isAuthenticated || user?.role !== "VENDEUR")) {
     return (
       <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-3xl shadow-xl shadow-indigo-100/40 border border-gray-100 max-w-md w-full text-center animate-in fade-in zoom-in duration-300">
@@ -43,6 +42,6 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  // L'utilisateur est autorisé, on rend le contenu de la page (dashboard, products, shop...)
+  // Chargement en cours ou utilisateur autorisé → on rend directement les pages
   return <>{children}</>;
 }

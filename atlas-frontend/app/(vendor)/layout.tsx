@@ -18,35 +18,7 @@ export default function VendorLayout({ children }: { children: React.ReactNode }
   const { user, isAuthenticated, isLoading } = useAuth();
   
   // Pendant la vérification de la session, on affiche un loader minimaliste
-  if (isLoading) {
-  return (
-    <div className="flex min-h-screen bg-[#F8F9FB]">
-      {/* Skeleton sidebar */}
-      <div className="hidden md:flex w-64 h-screen sticky top-0 flex-col bg-[#19244B]">
-        <div className="px-5 py-4 border-b border-white/10">
-          <div className="h-8 w-24 bg-white/10 rounded-lg animate-pulse" />
-        </div>
-        <div className="p-4 border-b border-white/10">
-          <div className="h-9 w-full bg-white/10 rounded-lg animate-pulse" />
-        </div>
-        <div className="flex-1 p-4 space-y-2">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-10 w-full bg-white/10 rounded-lg animate-pulse" />
-          ))}
-        </div>
-      </div>
-      {/* Skeleton contenu */}
-      <div className="flex-1 p-8 space-y-4">
-        <div className="h-8 w-48 bg-gray-200 rounded-lg animate-pulse" />
-        <div className="h-4 w-72 bg-gray-100 rounded animate-pulse" />
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-64 bg-white rounded-xl border border-gray-200 animate-pulse" />
-          <div className="h-64 bg-white rounded-xl border border-gray-200 animate-pulse" />
-        </div>
-      </div>
-    </div>
-  );
-}
+  if (isLoading) return null;
 
   if (!isAuthenticated || user?.role !== "VENDEUR") {
 

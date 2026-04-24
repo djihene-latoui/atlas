@@ -3,18 +3,50 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { AlertTriangle, Home } from "lucide-react";
 import Link from "next/link";
-
+/**
+ * Layout de protection pour les pages réservées aux vendeurs.
+ *
+ * Vérifie que l'utilisateur est authentifié avec le rôle `VENDEUR`.
+ * Comportement selon l'état de session :
+ * - **Chargement en cours** : spinner centré.
+ * - **Non authentifié ou rôle incorrect** : page "Accès Refusé" avec bouton vers l'accueil.
+ * - **Connecté en tant que VENDEUR** : rendu normal de `children` (dashboard, produits, boutique...).
+ *
+ * @param children - La page vendeur à protéger.
+ */
 export default function VendorLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isLoading } = useAuth();
   
   // Pendant la vérification de la session, on affiche un loader minimaliste
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#F8F9FB] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5c59f2]" />
+  return (
+    <div className="flex min-h-screen bg-[#F8F9FB]">
+      {/* Skeleton sidebar */}
+      <div className="hidden md:flex w-64 h-screen sticky top-0 flex-col bg-[#19244B]">
+        <div className="px-5 py-4 border-b border-white/10">
+          <div className="h-8 w-24 bg-white/10 rounded-lg animate-pulse" />
+        </div>
+        <div className="p-4 border-b border-white/10">
+          <div className="h-9 w-full bg-white/10 rounded-lg animate-pulse" />
+        </div>
+        <div className="flex-1 p-4 space-y-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-10 w-full bg-white/10 rounded-lg animate-pulse" />
+          ))}
+        </div>
       </div>
-    );
-  }
+      {/* Skeleton contenu */}
+      <div className="flex-1 p-8 space-y-4">
+        <div className="h-8 w-48 bg-gray-200 rounded-lg animate-pulse" />
+        <div className="h-4 w-72 bg-gray-100 rounded animate-pulse" />
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-64 bg-white rounded-xl border border-gray-200 animate-pulse" />
+          <div className="h-64 bg-white rounded-xl border border-gray-200 animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
   if (!isAuthenticated || user?.role !== "VENDEUR") {
 

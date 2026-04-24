@@ -4,9 +4,13 @@ import { useState } from "react";
 import { ShoppingCart, Star, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
-
+import { useAuthModal } from "@/contexts/AuthModalContext";
 // TYPES --------------------------------------
 
+/**
+ * Structure d'un produit affiché dans la carte catalogue.
+ * Exportée pour être réutilisée par les pages qui gèrent la liste de produits.
+ */
 export interface Product {
   id: number;
   variantes?: Array<{ id: number; sku: string; stock: number }>;
@@ -23,6 +27,11 @@ export interface Product {
 
 // COMPOSANT ÉTOILES --------------------------
 
+/**
+ * Affiche 5 étoiles colorées selon la note (arrondie à l'entier inférieur).
+ *
+ * @param rating - Note entre 0 et 5.
+ */
 function StarRating({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -40,11 +49,24 @@ function StarRating({ rating }: { rating: number }) {
 
 // COMPOSANT CARTE PRODUIT ---------------------
 
+/** Props du composant `ProductCard`. */
 interface ProductCardProps {
   product: Product;
   onAddToCart?: (product: Product) => void;
 }
 
+/**
+ * Carte produit utilisée dans le catalogue et sur la page d'accueil.
+ *
+ * Affiche l'image, le nom, la boutique vendeur (cliquable), la note, le prix
+ * et un bouton d'ajout au panier. Le clic sur la carte navigue vers la fiche produit.
+ *
+ * Le bouton panier gère 4 états visuels : `idle` → `loading` → `added` / `error`.
+ * Si l'utilisateur n'est pas connecté (401), redirige vers `/login`.
+ *
+ * @param product - Données du produit à afficher.
+ * @param onAddToCart - Callback optionnel appelé après un ajout réussi au panier.
+ */
 export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const router = useRouter();
 
@@ -52,6 +74,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { refreshCart } = useCart();
+  const { openLogin } = useAuthModal();
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -96,7 +119,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         onAddToCart?.(product);
         setTimeout(() => setStatus("idle"), 1500);
       } else if (res.status === 401) {
-        window.location.href = "/login";
+        openLogin();
       } else if (res.status === 400) {
         const data = await res.json();
         setErrorMessage(data.error || "Stock insuffisant");

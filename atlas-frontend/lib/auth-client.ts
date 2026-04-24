@@ -12,9 +12,11 @@
  * - `signUp`     : inscription avec champs additionnels (role, etc.)
  * - `signOut`    : déconnexion (supprime le cookie de session)
  * - `useSession` : hook React retournant `{ data: session, isPending, error }`
- *                  avec cache sessionStorage pour éviter le flash de chargement
+ *                  avec cache localStorage pour éviter le flash de chargement
  */
 import { createAuthClient } from "better-auth/react";
+
+const CACHE_KEY = "atlas_session_cache";
 
 export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL}",
@@ -23,41 +25,47 @@ export const authClient = createAuthClient({
   },
 });
 
-export const { signIn, signUp, signOut } = authClient;
+export const { signIn, signUp } = authClient;
 
 /**
- * Hook useSession avec cache sessionStorage.
+ * Déconnexion — vide le cache localStorage avant de signOut
+ * pour éviter qu'un cache stale réapparaisse au prochain montage.
+ */
+export async function signOut() {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(CACHE_KEY);
+  }
+  await authClient.signOut();
+}
+
+/**
+ * Hook useSession avec cache localStorage.
  *
- * Au premier rendu, si une session est déjà en cache (même onglet),
- * `isPending` est immédiatement `false` et la sidebar/layout s'affiche
- * sans flash. Le cache est mis à jour dès que BetterAuth confirme la session.
- *
- * Le sessionStorage est vidé automatiquement à la fermeture de l'onglet,
- * donc pas de risque de session fantôme entre deux utilisateurs.
+ * - Premier rendu : utilise le cache immédiatement → pas de flash
+ * - BetterAuth confirme la session en arrière-plan → met à jour le cache
+ * - Déconnexion ou session expirée → vide le cache
  */
 export function useSession() {
   const session = authClient.useSession();
 
-  // Met à jour le cache dès qu'on a une session valide
   if (typeof window !== "undefined") {
     if (session.data) {
-      sessionStorage.setItem("atlas_session", JSON.stringify(session.data));
+      // Session valide → on met à jour le cache
+      localStorage.setItem(CACHE_KEY, JSON.stringify(session.data));
     } else if (!session.isPending) {
-      // Session expirée ou déconnexion — on vide le cache
-      sessionStorage.removeItem("atlas_session");
+      // Plus de session et chargement terminé → on vide le cache
+      localStorage.removeItem(CACHE_KEY);
     }
   }
 
-  // Lit le cache pour le rendu initial
+  // Lecture du cache pour le rendu initial
   const cached =
     typeof window !== "undefined"
-      ? sessionStorage.getItem("atlas_session")
+      ? localStorage.getItem(CACHE_KEY)
       : null;
 
   return {
-    // Si BetterAuth n'a pas encore répondu, on utilise le cache
     data: session.data ?? (cached ? JSON.parse(cached) : null),
-    // isPending = false si on a déjà un cache (pas de flash)
     isPending: session.isPending && !cached,
     error: session.error,
   };

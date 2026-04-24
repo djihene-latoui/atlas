@@ -238,7 +238,7 @@ export default function SellerDashboardPage() {
   // ─────────────────────────────────────────────
 
   return (
-    <div className="flex min-h-screen bg-[#F8F9FB] overflow-x-hidden">
+    <div className="flex min-h-screen bg-[#F8F9FB]">
 
       <SellerSidebar />
 

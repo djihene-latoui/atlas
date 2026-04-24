@@ -292,7 +292,7 @@ export default function MesProduitsPage() {
     produits.length > 0 ? produits[0].boutique_nom : "Ma Boutique";
 
   return (
-    <div className="flex min-h-screen bg-gray-50 overflow-x-hidden">
+    <div className="flex min-h-screen bg-gray-50">
       <SellerSidebar sellerName={boutiqueNom} />
 
       <main className="flex-1 p-4 sm:p-6 lg:p-8 pt-16 md:pt-6 min-w-0">

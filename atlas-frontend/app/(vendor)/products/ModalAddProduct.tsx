@@ -266,24 +266,27 @@ export function ModalAddProduct({ isOpen, onClose, onSuccess, produitInitial }: 
 
     const variantesActives = form.variantes.filter((v) => !v.supprimee);
 
-    // ── Auto-création variante par défaut ────────────────────────────────
-    // Si aucune variante active n'a été configurée manuellement (stock vide),
-    // on injecte silencieusement une variante "Par défaut" avec stock = 0.
-    // Cela évite l'erreur backend "au moins une variante requise".
-    const hasRealVariante = variantesActives.some(
-      (v) => v.stock !== "" || v.attributs.some((a) => a.cle.trim() && a.valeur.trim())
-    );
+          // ── Validation des variantes ─────────────────────────────────────────
+      // Au moins une variante avec un stock renseigné est obligatoire.
+      // On n'injecte plus de variante par défaut silencieusement — le vendeur
+      // doit explicitement configurer ses variantes pour éviter les produits
+      // sans stock dans le catalogue.
+      const hasRealVariante = variantesActives.some(
+        (v) => v.stock !== "" && parseInt(v.stock) >= 0
+      );
 
-    const variantesToSubmit = hasRealVariante
-      ? variantesActives
-      : [
-          {
-            attributs: [] as AttributPaire[],
-            prix_supplementaire: "0.00",
-            stock: "0",
-            seuil_stock_faible: "5",
-          },
-        ];
+      if (!hasRealVariante) {
+        return setFormError("Veuillez créer au moins une variante avec un stock renseigné.");
+      }
+
+      // Vérifie que chaque variante active a bien un stock renseigné
+      for (let i = 0; i < variantesActives.length; i++) {
+        if (variantesActives[i].stock === "") {
+          return setFormError(`Veuillez renseigner le stock de la variante ${i + 1}.`);
+        }
+      }
+
+      const variantesToSubmit = variantesActives;
 
     const variantesFormatees = [];
     for (let i = 0; i < variantesToSubmit.length; i++) {
@@ -489,7 +492,7 @@ export function ModalAddProduct({ isOpen, onClose, onSuccess, produitInitial }: 
               <div>
                 <h3 className="font-bold text-gray-800">Variantes</h3>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Si aucune variante n'est configurée, une variante par défaut sera créée automatiquement.
+                  Au moins une variante avec un stock renseigné est obligatoire.
                 </p>
               </div>
               <button

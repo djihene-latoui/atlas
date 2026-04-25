@@ -452,33 +452,69 @@ export async function updateProduit(id: number, boutiqueId: number, data: any) {
 // DELETE
 // ─────────────────────────────────────────────
 
-    /**
- * Supprime definitivement un produit et toutes ses variantes de la base de donnees.
- * Utilise ON DELETE CASCADE sur variantes_produit — les variantes sont supprimees automatiquement.
- * Verifie que le produit appartient bien a la boutique du vendeur avant suppression.
+  /**
+ * Supprime definitivement un produit et toutes ses donnees liees.
+ * Suppression dans l'ordre pour respecter les contraintes FK :
+ * 1. articles_panier referençant les variantes
+ * 2. articles_commande referençant les variantes
+ * 3. avis referençant le produit
+ * 4. variantes_produit referençant le produit
+ * 5. produit lui-meme
  * @param {number} id - Identifiant du produit
  * @param {number} boutiqueId - Identifiant de la boutique (isolation vendeur)
  * @returns {Promise<object | null>} Produit supprime, ou null si introuvable/non autorise
- * @throws {Error} En cas d'erreur SQL — la transaction est rollbackee automatiquement
  */
 export async function deleteProduit(id: number, boutiqueId: number) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
-    // Suppression definitive du produit — les variantes sont supprimees
-    // automatiquement par la contrainte ON DELETE CASCADE en base.
-    const productResult = await client.query(
-      `DELETE FROM produits
-       WHERE id = $1 AND boutique_id = $2
-       RETURNING *`,
+    // Verifie que le produit appartient bien a la boutique avant de supprimer
+    const checkResult = await client.query(
+      `SELECT id FROM produits WHERE id = $1 AND boutique_id = $2`,
       [id, boutiqueId]
     );
 
-    if (productResult.rows.length === 0) {
+    if (checkResult.rows.length === 0) {
       await client.query("ROLLBACK");
       return null;
     }
+
+    // 1. Supprime les articles panier qui referencent les variantes de ce produit
+    await client.query(
+      `DELETE FROM articles_panier
+       WHERE variante_id IN (
+         SELECT id FROM variantes_produit WHERE produit_id = $1
+       )`,
+      [id]
+    );
+
+    // 2. Supprime les articles commande qui referencent les variantes de ce produit
+    await client.query(
+      `DELETE FROM articles_commande
+       WHERE variante_id IN (
+         SELECT id FROM variantes_produit WHERE produit_id = $1
+       )`,
+      [id]
+    );
+
+    // 3. Supprime les avis lies au produit
+    await client.query(
+      `DELETE FROM avis WHERE produit_id = $1`,
+      [id]
+    );
+
+    // 4. Supprime les variantes du produit
+    await client.query(
+      `DELETE FROM variantes_produit WHERE produit_id = $1`,
+      [id]
+    );
+
+    // 5. Supprime le produit lui-meme
+    const productResult = await client.query(
+      `DELETE FROM produits WHERE id = $1 RETURNING *`,
+      [id]
+    );
 
     await client.query("COMMIT");
     return productResult.rows[0];
@@ -490,7 +526,6 @@ export async function deleteProduit(id: number, boutiqueId: number) {
     client.release();
   }
 }
-
 // ─────────────────────────────────────────────
 // STOCKS
 // ─────────────────────────────────────────────

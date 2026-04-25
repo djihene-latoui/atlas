@@ -1,8 +1,20 @@
+/**
+ * @file products.service.ts
+ * @description Logique métier pour la gestion des produits et de leurs variantes.
+ * Ce service effectue toutes les requêtes SQL liées aux produits :
+ * lecture (publique et vendeur), création, mise à jour, soft delete et gestion du stock.
+ */
 import { pool } from "../db/index.js";
 
-//_______________________________________________
-// Générer le sku unique pour une variante
-//_______________________________________________
+/**
+ * Génère un SKU unique pour une nouvelle variante produit.
+ * Format : B{boutiqueId}-P{produitId}-{séquence sur 3 chiffres}
+ * La séquence est calculée en comptant les variantes existantes du produit + 1.
+ * @param {object} client - Client PostgreSQL de la transaction en cours
+ * @param {number} boutiqueId - Identifiant de la boutique propriétaire
+ * @param {number} produitId - Identifiant du produit parent
+ * @returns {Promise<string>} SKU unique (ex: "B3-P12-001")
+ */
 async function generateSku(client: any, boutiqueId: number, produitId: number): Promise<string> {
   const result = await client.query(
     `SELECT COUNT(*) FROM variantes_produit WHERE produit_id = $1`,
@@ -17,6 +29,12 @@ async function generateSku(client: any, boutiqueId: number, produitId: number): 
 // READ — Récupérer un produit par ID (route publique)
 // ─────────────────────────────────────────────
 
+/**
+ * Retourne le détail d'un produit actif pour la vue publique (page détail).
+ * Inclut les variantes actives, la boutique, la catégorie, la note moyenne et le nombre d'avis.
+ * @param {number} id - Identifiant du produit
+ * @returns {Promise<object | null>} Produit complet avec variantes, ou null si introuvable/inactif
+ */
 export async function getProduitPublicById(id: number) {
   const result = await pool.query(
     `SELECT
@@ -50,6 +68,22 @@ export async function getProduitPublicById(id: number) {
 // READ — Récupérer les produits (Catalogue public avec filtres)
 // ─────────────────────────────────────────────
 
+/**
+ * Retourne le catalogue produits public filtré et paginé.
+ * Construit une requête SQL dynamique basée sur les filtres fournis.
+ * N'inclut que les produits actifs avec au moins une variante en stock.
+ * @param {object} filters - Critères de filtrage
+ * @param {string} [filters.recherche] - Terme de recherche libre
+ * @param {string} [filters.recherche_type] - Portée de la recherche : produit | boutique | categorie
+ * @param {number} [filters.prix_min] - Prix minimum (filtre inclusif)
+ * @param {number} [filters.prix_max] - Prix maximum (filtre inclusif)
+ * @param {string} [filters.categories] - Noms de catégories séparés par des virgules
+ * @param {number} [filters.note_min] - Note moyenne minimale (1-5)
+ * @param {string} [filters.tri] - Tri : price-asc | price-desc | rating | newest
+ * @param {string} [filters.page] - Numéro de page (défaut: 1)
+ * @param {string} [filters.limite] - Produits par page (défaut: 9)
+ * @returns {Promise<{ produits: object[], totalCount: number, totalPages: number, currentPage: number }>}
+ */
 export async function getProduitsPublicFiltres(filters: any) {
   const values: any[] = [];
   let paramIndex = 1;
@@ -177,6 +211,12 @@ export async function getProduitsPublicFiltres(filters: any) {
 // READ — Récupérer les produits par Boutique (Vendeur)
 // ─────────────────────────────────────────────
 
+/**
+ * Retourne tous les produits d'une boutique (vue vendeur — inclut produits inactifs).
+ * Triés par date de création décroissante.
+ * @param {number} boutiqueId - Identifiant de la boutique
+ * @returns {Promise<object[]>} Liste des produits avec variantes, note et avis
+ */
 export async function getProduitsByBoutique(boutiqueId: number) {
   const result = await pool.query(
     `SELECT 
@@ -204,6 +244,12 @@ export async function getProduitsByBoutique(boutiqueId: number) {
 // READ — Récupérer un produit par ID (Vendeur)
 // ─────────────────────────────────────────────
 
+/**
+ * Retourne le détail d'un produit en vérifiant qu'il appartient à la boutique (vue vendeur).
+ * @param {number} id - Identifiant du produit
+ * @param {number} boutiqueId - Identifiant de la boutique propriétaire (isolation vendeur)
+ * @returns {Promise<object | undefined>} Produit complet ou undefined si introuvable/non autorisé
+ */
 export async function getProduitById(id: number, boutiqueId: number) {
   const result = await pool.query(
     `SELECT 
@@ -231,6 +277,24 @@ export async function getProduitById(id: number, boutiqueId: number) {
 // CREATE — Créer un produit
 // ─────────────────────────────────────────────
 
+/**
+ * Crée un produit et ses variantes dans une transaction atomique.
+ * Pour chaque variante, un SKU unique est généré si non fourni.
+ * Si aucune variante n'est fournie, une variante par défaut vide est créée.
+ * @param {object} data - Données du produit
+ * @param {number} data.boutiqueId - Identifiant de la boutique propriétaire
+ * @param {number} data.categorieId - Identifiant de la catégorie
+ * @param {string} data.nom - Nom du produit
+ * @param {string} [data.description] - Description du produit
+ * @param {number} data.prix - Prix de base en euros
+ * @param {number} [data.prixCompare] - Prix barré (avant promotion)
+ * @param {string[]} [data.images] - URLs des images
+ * @param {boolean} [data.actif] - Visibilité publique (défaut: true)
+ * @param {object[]} [data.variantes] - Variantes du produit
+ * @param {number} [data.stock] - Stock initial si variante par défaut auto-créée
+ * @returns {Promise<object>} Produit créé (sans les variantes dans la réponse directe)
+ * @throws {Error} En cas d'erreur SQL — la transaction est rollbackée automatiquement
+ */
 export async function createProduit(data: any) {
   const client = await pool.connect();
   try {
@@ -301,6 +365,27 @@ export async function createProduit(data: any) {
 // UPDATE — Modifier un produit
 // ─────────────────────────────────────────────
 
+/**
+ * Met à jour un produit et synchronise ses variantes dans une transaction atomique.
+ * Logique variantes :
+ * - Variante avec `id` et sans `supprimee` → mise à jour (attributs, prix, stock, seuil)
+ * - Variante avec `id` et `supprimee: true` → soft delete (actif = false)
+ * - Variante sans `id` et sans `supprimee` → insertion avec SKU généré automatiquement
+ * - Variantes existantes absentes de la liste → soft delete + stock mis à 0
+ * @param {number} id - Identifiant du produit à modifier
+ * @param {number} boutiqueId - Identifiant de la boutique (isolation vendeur)
+ * @param {object} data - Données de mise à jour
+ * @param {string} [data.nom] - Nouveau nom
+ * @param {string} [data.description] - Nouvelle description
+ * @param {number} [data.prix] - Nouveau prix
+ * @param {number} [data.prix_compare] - Nouveau prix barré
+ * @param {string[]} [data.images] - Nouvelles URLs d'images
+ * @param {boolean} [data.actif] - Visibilité publique
+ * @param {number} [data.categorie_id] - Nouvelle catégorie
+ * @param {object[]} [data.variantes] - Liste des variantes à synchroniser
+ * @returns {Promise<object>} Produit mis à jour
+ * @throws {Error} "PRODUIT_NON_TROUVE" si le produit n'existe pas ou n'appartient pas à la boutique
+ */
 export async function updateProduit(id: number, boutiqueId: number, data: any) {
   const client = await pool.connect();
   try {
@@ -367,14 +452,24 @@ export async function updateProduit(id: number, boutiqueId: number, data: any) {
 // DELETE
 // ─────────────────────────────────────────────
 
+    /**
+ * Supprime definitivement un produit et toutes ses variantes de la base de donnees.
+ * Utilise ON DELETE CASCADE sur variantes_produit — les variantes sont supprimees automatiquement.
+ * Verifie que le produit appartient bien a la boutique du vendeur avant suppression.
+ * @param {number} id - Identifiant du produit
+ * @param {number} boutiqueId - Identifiant de la boutique (isolation vendeur)
+ * @returns {Promise<object | null>} Produit supprime, ou null si introuvable/non autorise
+ * @throws {Error} En cas d'erreur SQL — la transaction est rollbackee automatiquement
+ */
 export async function deleteProduit(id: number, boutiqueId: number) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
+    // Suppression definitive du produit — les variantes sont supprimees
+    // automatiquement par la contrainte ON DELETE CASCADE en base.
     const productResult = await client.query(
-      `UPDATE produits
-       SET actif = false, mis_a_jour_le = now()
+      `DELETE FROM produits
        WHERE id = $1 AND boutique_id = $2
        RETURNING *`,
       [id, boutiqueId]
@@ -384,13 +479,6 @@ export async function deleteProduit(id: number, boutiqueId: number) {
       await client.query("ROLLBACK");
       return null;
     }
-
-    await client.query(
-      `UPDATE variantes_produit
-       SET stock = 0
-       WHERE produit_id = $1`,
-      [id]
-    );
 
     await client.query("COMMIT");
     return productResult.rows[0];
@@ -407,6 +495,13 @@ export async function deleteProduit(id: number, boutiqueId: number) {
 // STOCKS
 // ─────────────────────────────────────────────
 
+/**
+ * Retourne le stock de toutes les variantes actives d'un produit (vue vendeur).
+ * Inclut un indicateur `stock_faible` calculé en comparant stock et seuil_stock_faible.
+ * @param {number} produitId - Identifiant du produit
+ * @param {number} boutiqueId - Identifiant de la boutique (isolation vendeur)
+ * @returns {Promise<object[]>} Liste des variantes avec id, sku, stock, seuil, attributs, stock_faible
+ */
 export async function getStockProduit(produitId: number, boutiqueId: number) {
   const result = await pool.query(
     `SELECT 
@@ -420,6 +515,14 @@ export async function getStockProduit(produitId: number, boutiqueId: number) {
   return result.rows;
 }
 
+/**
+ * Remplace la valeur de stock d'une variante par une valeur absolue.
+ * Vérifie que la variante appartient bien à la boutique du vendeur.
+ * @param {number} varianteId - Identifiant de la variante produit
+ * @param {number} boutiqueId - Identifiant de la boutique (isolation vendeur)
+ * @param {number} stock - Nouvelle valeur de stock (absolue, pas un delta)
+ * @returns {Promise<object | undefined>} Variante mise à jour, ou undefined si non trouvée/non autorisée
+ */
 export async function updateStock(varianteId: number, boutiqueId: number, stock: number) {
   const result = await pool.query(
     `UPDATE variantes_produit v
@@ -432,6 +535,15 @@ export async function updateStock(varianteId: number, boutiqueId: number, stock:
   return result.rows[0];
 }
 
+/**
+ * Ajoute une quantité au stock actuel d'une variante (réapprovisionnement additif).
+ * Contrairement à `updateStock`, cette fonction incrémente le stock existant.
+ * Vérifie que la variante appartient bien à la boutique du vendeur.
+ * @param {number} varianteId - Identifiant de la variante produit
+ * @param {number} boutiqueId - Identifiant de la boutique (isolation vendeur)
+ * @param {number} quantiteAjouter - Quantité à ajouter au stock actuel (delta positif)
+ * @returns {Promise<object | null>} Variante mise à jour, ou null si non trouvée/non autorisée
+ */
 export async function reapprovisionnerVariante(
   varianteId: number,
   boutiqueId: number,

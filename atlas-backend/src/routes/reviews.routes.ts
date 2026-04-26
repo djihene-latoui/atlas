@@ -60,7 +60,7 @@ router.post("/product/:id", authMiddleware, clientMiddleware, async (req: Reques
       res.status(400).json({ error: "La note doit être entre 1 et 5" });
       return;
     }
-/*
+
     // Vérifier que le client a bien commandé ce produit ET l'a reçu (LIVRE)
     const eligibilite = await pool.query(
       `SELECT ac.id
@@ -80,7 +80,7 @@ router.post("/product/:id", authMiddleware, clientMiddleware, async (req: Reques
       });
       return;
     }
-      */
+      
 
     // Vérifier qu'il n'a pas déjà posté un avis
     const dejaAvis = await pool.query(

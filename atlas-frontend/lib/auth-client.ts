@@ -38,6 +38,11 @@ export async function signOut() {
     localStorage.removeItem(CACHE_KEY);
   }
   await authClient.signOut();
+  if (typeof window !== "undefined") {
+    document.cookie = "__Secure-better-auth.session_token=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;secure;samesite=none";
+    document.cookie = "better-auth.session_token=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+    window.location.href = "/";
+  }
 }
 
 /**

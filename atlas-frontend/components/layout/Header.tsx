@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthModal } from "@/contexts/AuthModalContext";
+import { useCart } from "@/contexts/CartContext";
 import {
   ShoppingCart,
   User,
@@ -29,12 +30,19 @@ import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import logo from "@/assets/Atlas_logo_blanc.png";
 
+/** Rôles utilisateurs possibles dans l'application. `null` si non authentifié. */
 type Role = "CLIENT" | "VENDEUR" | "ADMIN" | null;
 
+/** Props du composant `Header`. */
 interface HeaderProps {
+  /** Nombre d'articles dans le panier, affiché comme badge sur l'icône panier. Par défaut `0`. */
   cartCount?: number;
 }
 
+/**
+ * Liens de navigation affichés selon le rôle de l'utilisateur connecté.
+ * Les vendeurs n'ont pas de liens dans le header public car ils ont leur propre sidebar.
+ */
 const NAV_LINKS: Record<NonNullable<Role> | "VISITOR", { label: string; href: string }[]> = {
   VISITOR: [
     { label: "Home", href: "/" },
@@ -57,6 +65,7 @@ const NAV_LINKS: Record<NonNullable<Role> | "VISITOR", { label: string; href: st
   ],
 };
 
+/** Styles CSS inline du header selon le rôle (fond foncé pour tous sauf ADMIN qui a un fond rouge). */
 const HEADER_STYLE: Record<NonNullable<Role> | "VISITOR", React.CSSProperties> = {
   VISITOR: {
     background: "rgba(13, 27, 62, 0.8)",
@@ -76,7 +85,21 @@ const HEADER_STYLE: Record<NonNullable<Role> | "VISITOR", React.CSSProperties> =
   },
 };
 
-export function Header({ cartCount = 0 }: HeaderProps) {
+/**
+ * En-tête global de l'application, présent sur toutes les pages publiques et client.
+ *
+ * Adapte son contenu selon le rôle de l'utilisateur :
+ * - **Visiteur** : liens catalogue/vendeurs/à propos + boutons Connexion/Inscription.
+ * - **CLIENT** : mêmes liens + icône panier avec badge + menu déroulant (profil, commandes).
+ * - **ADMIN** : liens admin + badge rouge "Admin" + menu déroulant d'administration.
+ * - **VENDEUR** : header masqué sur les pages vendeur (`/dashboard`, `/products`, etc.).
+ *
+ * Inclut un menu mobile hamburger pour les écrans de petite taille.
+ *
+ * @param cartCount - Nombre d'articles dans le panier (affichés en badge sur l'icône).
+ */
+export function Header() {
+  const { cartCount } = useCart();
   const { user, isAuthenticated, logout , isLoading  } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -105,11 +128,11 @@ export function Header({ cartCount = 0 }: HeaderProps) {
         : role
       : "VISITOR";
 
-  if (isLoading) {
+  if(isLoading) {
     if (isVendeurPage) return null;
 
     return (
-      <header className="sticky top-0 z-50 w-full" style={HEADER_STYLE["VISITOR"]}>
+      <header className="sticky top-0 z-50 w-full" style={HEADER_STYLE["VISITOR"]} suppressHydrationWarning>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 shrink-0">

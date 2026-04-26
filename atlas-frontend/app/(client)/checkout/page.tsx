@@ -17,7 +17,7 @@ import {
 } from "@/lib/checkout";
 
 const STEP_ORDER: CheckoutStep[] = ["address", "shipping", "payment", "confirmation"];
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3005";
+const API_URL = "";
 
 // Sidebar ---------------------------------------------------------------------
 function OrderSummarySidebar({

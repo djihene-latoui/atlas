@@ -33,7 +33,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
    * Stabilisé avec `useCallback` pour éviter des re-fetches inutiles.
    */
   const refreshCart = useCallback(() => {
-  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cart`, {
+  fetch(`/api/cart`, {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",

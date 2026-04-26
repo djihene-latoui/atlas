@@ -25,14 +25,18 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
   trustedOrigins: [
-  process.env.FRONTEND_URL || "http://localhost:3000",
-  "https://atlas-front-virid.vercel.app",
-],
+    process.env.FRONTEND_URL || "http://localhost:3000",
+    "https://atlas-front-virid.vercel.app",
+  ],
   advanced: {
     defaultCookieAttributes: {
       sameSite: isProd ? "none" : "lax",
       secure: isProd,
       httpOnly: true,
+      domain: undefined,
+    },
+    crossSubdomainCookies: {
+      enabled: false,
     },
   },
   emailAndPassword: {
@@ -60,5 +64,8 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
+    cookieCache: {
+      enabled: false,
+    },
   },
 });

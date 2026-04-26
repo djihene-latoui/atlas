@@ -110,7 +110,7 @@ function StatusModal({
 // Composant principal ------------------------------------
 
 export default function VendorOrdersPage() {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = "";
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('TOUS');

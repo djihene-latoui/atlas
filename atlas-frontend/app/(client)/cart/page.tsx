@@ -11,7 +11,7 @@ export default function PanierPage() {
 
   const fetchCart = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cart`, {
+      const res = await fetch(`/api/cart`, {
         credentials: "include",
         cache: "no-store",
       });

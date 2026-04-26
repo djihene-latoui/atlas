@@ -76,7 +76,7 @@ router.post("/product/:id", authMiddleware, clientMiddleware, async (req: Reques
 
     if (eligibilite.rows.length === 0) {
       res.status(403).json({
-        error: "Vous devez avoir reçu ce produit pour laisser un avis",
+        error: "L'achat et la réception de cet article sont requis pour publier un commentaire",
       });
       return;
     }

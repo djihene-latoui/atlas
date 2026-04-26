@@ -101,18 +101,17 @@ export function CartItemRow({ item, onCartUpdate }: { item: any; onCartUpdate?: 
   };
 
   const handleRemove = async () => {
-  setIsDeleting(true);
   setShowDeleteModal(false);
 
   try {
     await removeFromCart(item.id);
-    onCartUpdate?.();
+    await onCartUpdate?.();  // ← attend le re-fetch AVANT de cacher l'article
     refreshCart();
-    router.refresh();
   } catch (err) {
-    setIsDeleting(false);
     console.error("Erreur suppression:", err);
     alert("Erreur lors de la suppression. Veuillez réessayer.");
+  } finally {
+    setIsDeleting(true);  // ← cache l'article seulement après le re-fetch
   }
 };
 

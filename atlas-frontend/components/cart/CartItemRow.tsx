@@ -6,6 +6,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/contexts/CartContext";
 
+/**
+ * Modale de confirmation avant suppression d'un article du panier.
+ *
+ * @param productName - Nom du produit à supprimer, affiché dans le message.
+ * @param onConfirm - Callback appelé quand l'utilisateur confirme la suppression.
+ * @param onCancel - Callback appelé quand l'utilisateur annule.
+ */
 function DeleteModal({
   productName,
   onConfirm,
@@ -52,6 +59,18 @@ function DeleteModal({
   );
 }
 
+/**
+ * Ligne d'article dans la page panier.
+ *
+ * Affiche l'image, le nom, les attributs de variante (couleur, taille…), le prix unitaire
+ * et le total. Permet d'ajuster la quantité (avec validation de stock) et de supprimer l'article.
+ *
+ * La mise à jour de quantité est optimiste : l'UI est mise à jour immédiatement,
+ * et annulée si l'API retourne une erreur (ex: stock insuffisant).
+ *
+ * @param item - Article du panier (données brutes de l'API).
+ * @param onCartUpdate - Callback optionnel appelé après toute modification réussie.
+ */
 export function CartItemRow({ item, onCartUpdate }: { item: any; onCartUpdate?: () => void }) {
   const router = useRouter();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -82,22 +101,19 @@ export function CartItemRow({ item, onCartUpdate }: { item: any; onCartUpdate?: 
   };
 
   const handleRemove = async () => {
-    // Optimistic Update: Hide the UI element immediately
-    setIsDeleting(true);
     setShowDeleteModal(false);
 
     try {
       await removeFromCart(item.id);
       onCartUpdate?.();
       refreshCart();
-      router.refresh();
+      await router.refresh(); // ← await ici
+      setIsDeleting(true);    // ← on cache APRÈS le refresh
     } catch (err) {
-      // Rollback if the API fails
-      setIsDeleting(false);
       console.error("Erreur suppression:", err);
       alert("Erreur lors de la suppression. Veuillez réessayer.");
     }
-  };
+};
 
   // If the item is marked as deleting, don't render it
   if (isDeleting) return null;

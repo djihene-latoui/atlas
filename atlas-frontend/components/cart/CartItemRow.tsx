@@ -101,18 +101,19 @@ export function CartItemRow({ item, onCartUpdate }: { item: any; onCartUpdate?: 
   };
 
   const handleRemove = async () => {
-    setShowDeleteModal(false);
+  setIsDeleting(true);      // ← remet l'optimistic update comme avant
+  setShowDeleteModal(false);
 
-    try {
-      await removeFromCart(item.id);
-      onCartUpdate?.();
-      refreshCart();
-      await router.refresh(); // ← await ici
-      setIsDeleting(true);    // ← on cache APRÈS le refresh
-    } catch (err) {
-      console.error("Erreur suppression:", err);
-      alert("Erreur lors de la suppression. Veuillez réessayer.");
-    }
+  try {
+    await removeFromCart(item.id);
+    onCartUpdate?.();
+    refreshCart();
+    router.refresh();       // ← sans await
+  } catch (err) {
+    setIsDeleting(false);
+    console.error("Erreur suppression:", err);
+    alert("Erreur lors de la suppression. Veuillez réessayer.");
+  }
 };
 
   // If the item is marked as deleting, don't render it
@@ -125,7 +126,7 @@ export function CartItemRow({ item, onCartUpdate }: { item: any; onCartUpdate?: 
     <>
       <div className="py-4 flex gap-3 sm:gap-5 items-start border-b last:border-0">
         <img
-          src={item.images?.[0] ?? "/placeholder.png"}
+          src={item.images?.[0] || "https://placehold.co/96x96?text=Photo"}
           alt={item.produit_nom}
           className="w-16 h-16 sm:w-24 sm:h-24 flex-shrink-0 rounded-lg object-cover border"
         />

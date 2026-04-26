@@ -101,14 +101,14 @@ export function CartItemRow({ item, onCartUpdate }: { item: any; onCartUpdate?: 
   };
 
   const handleRemove = async () => {
-  setIsDeleting(true);      // ← remet l'optimistic update comme avant
+  setIsDeleting(true);
   setShowDeleteModal(false);
 
   try {
     await removeFromCart(item.id);
     onCartUpdate?.();
     refreshCart();
-    router.refresh();       // ← sans await
+    router.refresh();
   } catch (err) {
     setIsDeleting(false);
     console.error("Erreur suppression:", err);

@@ -23,7 +23,7 @@ export function vendorMiddleware(
   const user = (req as any).user;
 
   // Double vérification — si user est absent c'est que authMiddleware n'a pas été appelé avant ce middleware
-console.log("VENDOR MIDDLEWARE - user:", JSON.stringify(user));
+
   
   if (!user) {
     res.status(401).json({ 

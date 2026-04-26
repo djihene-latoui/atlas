@@ -71,7 +71,7 @@ function DeleteModal({
  * @param item - Article du panier (données brutes de l'API).
  * @param onCartUpdate - Callback optionnel appelé après toute modification réussie.
  */
-export function CartItemRow({ item, onCartUpdate }: { item: any; onCartUpdate?: () => void }) {
+export function CartItemRow({ item, onCartUpdate, onRemove }: { item: any; onCartUpdate?: () => void; onRemove?: () => void }) {
   const router = useRouter();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [stockError, setStockError] = useState<string | null>(null);
@@ -100,19 +100,19 @@ export function CartItemRow({ item, onCartUpdate }: { item: any; onCartUpdate?: 
     }
   };
 
-  const handleRemove = async () => {
-  setShowDeleteModal(false);
-  onRemove?.();  // ← retire l'article du state parent immédiatement
+    const handleRemove = async () => {
+      setShowDeleteModal(false);
+      onRemove?.();  // ← retire l'article du state parent immédiatement
 
-  try {
-    await removeFromCart(item.id);
-    onCartUpdate?.();
-    refreshCart();
-  } catch (err) {
-    console.error("Erreur suppression:", err);
-    alert("Erreur lors de la suppression. Veuillez réessayer.");
-  }
-};
+      try {
+        await removeFromCart(item.id);
+        onCartUpdate?.();
+        refreshCart();
+      } catch (err) {
+        console.error("Erreur suppression:", err);
+        alert("Erreur lors de la suppression. Veuillez réessayer.");
+      }
+    };
 
   // If the item is marked as deleting, don't render it
   if (isDeleting) return null;

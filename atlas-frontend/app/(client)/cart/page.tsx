@@ -89,9 +89,8 @@ export default async function PanierPage() {
           {/* Articles */}
           <div className="lg:col-span-2 space-y-6">
             {articlesPanier.length > 0 ? (
-              Object.entries(groupesBoutiques)
-                  .filter(([, groupe]: [string, any]) => groupe.articles.length > 0)
-                  .map(([bId, groupe]: [string, any]) => (
+              Object.entries(groupesBoutiques).map(
+                ([bId, groupe]: [string, any]) => (
                   <section
                     key={bId}
                     className="bg-white rounded-2xl border border-slate-200 overflow-hidden"

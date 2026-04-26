@@ -240,7 +240,7 @@ export default function MesProduitsPage() {
     setSuppressionEnCours(true);
     try {
       await fetch(
-        `/${produitASupprimer.id}`,
+        `/api/vendor/products/${produitASupprimer.id}`,
         {
           method: "DELETE",
           credentials: "include",

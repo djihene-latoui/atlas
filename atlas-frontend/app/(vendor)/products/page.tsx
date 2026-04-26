@@ -198,7 +198,7 @@ export default function MesProduitsPage() {
    * Appelee au montage et apres chaque creation ou modification.
    */
   const chargerProduits = () => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/vendor/products`, {
+    fetch(`/api/vendor/products`, {
       credentials: "include",
     })
       .then((res) => res.json())
@@ -211,7 +211,7 @@ export default function MesProduitsPage() {
 
     // Chargement des categories depuis l'API pour alimenter le filtre dynamiquement.
     // Remplace les options codees en dur qui ne reflétaient pas la vraie BDD.
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`, {
+    fetch(`/api/categories`, {
       credentials: "include",
     })
       .then((res) => res.json())
@@ -240,7 +240,7 @@ export default function MesProduitsPage() {
     setSuppressionEnCours(true);
     try {
       await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/vendor/products/${produitASupprimer.id}`,
+        `/${produitASupprimer.id}`,
         {
           method: "DELETE",
           credentials: "include",

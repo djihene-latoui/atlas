@@ -92,7 +92,7 @@ export default function FicheProduitPage({ params }: { params: Promise<{ id: str
   useEffect(() => {
     async function fetchProduit() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/products/${id}`);
+        const res = await fetch(`/api/products/${id}`);
         const data = await res.json();
         setProduit(data);
         if (data.variantes && data.variantes.length > 0) {
@@ -110,7 +110,7 @@ export default function FicheProduitPage({ params }: { params: Promise<{ id: str
 
     async function fetchAvis() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/product/${id}`);
+        const res = await fetch(`/api/reviews/product/${id}`);
         const data = await res.json();
         setAvis(Array.isArray(data) ? data : []);
       } catch {
@@ -120,7 +120,7 @@ export default function FicheProduitPage({ params }: { params: Promise<{ id: str
 
     async function fetchMe() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/me`, { credentials: "include" });
+        const res = await fetch(`/api/me`, { credentials: "include" });
         if (!res.ok) return;
         const data = await res.json();
         if (data?.user) {
@@ -206,7 +206,7 @@ export default function FicheProduitPage({ params }: { params: Promise<{ id: str
     return;
   }
     try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cart/items`, {
+        const res = await fetch(`/api/cart/items`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -233,7 +233,7 @@ export default function FicheProduitPage({ params }: { params: Promise<{ id: str
     setSubmitLoading(true);
     setSubmitError("");
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/product/${id}`, {
+      const res = await fetch(`/api/reviews/product/${id}`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -244,7 +244,7 @@ export default function FicheProduitPage({ params }: { params: Promise<{ id: str
         setSubmitError(data.error || "Erreur lors de l'envoi");
       } else {
         setSubmitSuccess(true);
-        const updated = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/product/${id}`);
+        const updated = await fetch(`/api/reviews/product/${id}`);
         const updatedData = await updated.json();
         const nouvellesAvis = Array.isArray(updatedData) ? updatedData : [];
         setAvis(nouvellesAvis);
@@ -264,7 +264,7 @@ export default function FicheProduitPage({ params }: { params: Promise<{ id: str
     setSubmitLoading(true);
     setSubmitError("");
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/${avisId}`, {
+      const res = await fetch(`/api/reviews/${avisId}`, {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -275,7 +275,7 @@ export default function FicheProduitPage({ params }: { params: Promise<{ id: str
         setSubmitError(data.error || "Erreur lors de la modification");
       } else {
         setSubmitSuccess(true);
-        const updated = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/product/${id}`);
+        const updated = await fetch(`/api/reviews/product/${id}`);
         const updatedData = await updated.json();
         const nouvellesAvis = Array.isArray(updatedData) ? updatedData : [];
         setAvis(nouvellesAvis);
@@ -293,7 +293,7 @@ export default function FicheProduitPage({ params }: { params: Promise<{ id: str
 
   async function handleDeleteAvis(avisId: number) {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reviews/${avisId}`, {
+      await fetch(`/api/reviews/${avisId}`, {
         method: "DELETE",
         credentials: "include",
       });

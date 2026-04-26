@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE_URL = "";
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -15,7 +15,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
 }
 // Dans lib/api.ts (Frontend)
 export async function addToCart(varianteId: number, quantity: number = 1) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cart/items`, {
+  const res = await fetch(`/api/cart/items`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     // On change "productId" par "variante_id" pour plaire au backend

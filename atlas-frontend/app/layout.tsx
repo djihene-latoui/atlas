@@ -37,18 +37,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
       <body className="min-h-screen flex flex-col antialiased" suppressHydrationWarning>
-        <CartProvider>
-          <Providers>
-            <CartProvider>        
-              <AuthModalProvider>
-                <Header />
-                <AuthModal />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </AuthModalProvider>
-            </CartProvider>
-          </Providers>
-        </CartProvider>
+        <Providers>
+          <CartProvider>
+            <AuthModalProvider>
+              <Header />
+              <AuthModal />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </AuthModalProvider>
+          </CartProvider>
+        </Providers>
       </body>
     </html>
   );

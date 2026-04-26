@@ -32,7 +32,7 @@ export function vendorMiddleware(
 
   // On vérifie que le rôle est bien "VENDEUR"
   // Un CLIENT ne peut pas créer ou modifier des produits
-  if (user.role !== "VENDEUR") {
+  if (user.role !== "VENDEUR" && user.role !== "SELLER") {
     res.status(403).json({ 
       error: "Accès refusé — cette action est réservée aux vendeurs" 
     });

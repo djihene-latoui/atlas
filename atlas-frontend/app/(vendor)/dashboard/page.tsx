@@ -118,7 +118,7 @@ function getStockBadge(stock: number, seuil: number): { className: string; label
 
 export default function SellerDashboardPage() {
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = "";
 
   const [kpiData,         setKpiData]         = useState<KpiData | null>(null);
   const [kpiLoading,      setKpiLoading]      = useState(true);

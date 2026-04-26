@@ -14,14 +14,15 @@ export const revalidate = 0;
  */
 async function getCartData() {
   const cookieStore = await cookies();
-  const allCookies = cookieStore.getAll()
-    .map(c => `${c.name}=${c.value}`)
-    .join('; ');
+  const sessionCookie = cookieStore.get('__Secure-better-auth.session_token') 
+    ?? cookieStore.get('better-auth.session_token');
+
+  if (!sessionCookie) return { articles: [], total: 0 };
 
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cart`, {
     method: "GET",
     headers: { 
-      Cookie: allCookies,
+      Cookie: `${sessionCookie.name}=${sessionCookie.value}`,
       "Content-Type": "application/json"
     },
     cache: "no-store",

@@ -75,8 +75,15 @@ export default function PanierPage() {
                     </div>
                     <div className="p-6 divide-y divide-slate-100">
                       {groupe.articles.map((item: any) => (
-                        <CartItemRow key={item.id} item={item} onCartUpdate={fetchCart} />
-                      ))}
+                          <CartItemRow 
+                            key={item.id} 
+                            item={item} 
+                            onCartUpdate={fetchCart}
+                            onRemove={() => {
+                              setArticlesPanier(prev => prev.filter(a => a.id !== item.id));
+                            }}
+                          />
+                        ))}
                     </div>
                   </section>
                 ))

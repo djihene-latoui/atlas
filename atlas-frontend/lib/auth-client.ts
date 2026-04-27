@@ -3,7 +3,7 @@ import { createAuthClient } from "better-auth/react";
 const CACHE_KEY = "atlas_session_cache";
 
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_API_URL, // 
+  baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL, // ✅ pointe vers le backend Better Auth
   fetchOptions: {
     credentials: "include",
   },

@@ -114,7 +114,7 @@ export function ModalAddProduct({ isOpen, onClose, onSuccess, produitInitial }: 
 
   useEffect(() => {
     setLoadingCategories(true);
-    const apiUrl ="";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
     fetch(`/api/categories`, { credentials: "include" })
       .then((r) => r.json())
       .then((data) => setCategories(Array.isArray(data) ? data : []))

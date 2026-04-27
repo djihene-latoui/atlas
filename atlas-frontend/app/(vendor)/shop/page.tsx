@@ -68,8 +68,7 @@ export default function SellerStorePage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  const backendUrl =
-    "";
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL || "";
 
   // Gestion de l'enregistrement automatique des visuels
   const handleSaveVisuals = async (newLogoUrl?: string, newCoverUrl?: string) => {
